@@ -91,6 +91,7 @@ void setupLocator() {
 Then simply use
 
 ```dart
+setupLocator();
 final todos = locator<TodoService>().all;
 print('${todos.length} todos found!');
 ```
