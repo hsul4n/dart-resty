@@ -1,13 +1,12 @@
 # Resty
 
-A simple http wrapper inspired from [zttp](https://github.com/kitetail/zttp) for dart and flutter.
+A simple, light and useful http wrapper inspired from [zttp](https://github.com/kitetail/zttp) for dart and flutter.
 
 # Features
 
+- Lightweight.
 - Simple use.
-- One shared object.
 - Support both dart & flutter.
-- Depend on [http](https://pub.dev/packages/http) library.
 
 # Usage
 
@@ -95,6 +94,8 @@ setupLocator();
 final todos = locator<TodoService>().all;
 print('${todos.length} todos found!');
 ```
+
+# Full [Example](https://github.com/hsul4n/dart-resty/tree/master/example/flutter)
 
 ## Fututres & Bugs
 

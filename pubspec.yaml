@@ -1,14 +1,13 @@
 name: resty
 version: 0.0.1
-author: Huthaifah Mustafa
 homepage: https://github.com/hsul4n/dart-resty
-description: A simple http wrapper.
+description: A simple, light and useful http wrapper.
 
 environment:
   sdk: ">=2.6.0 <3.0.0"
 
 dependencies:
-  http: any
+  http: ^0.12.1
 
 dev_dependencies:
   test: ^1.3.0

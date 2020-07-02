@@ -33,7 +33,7 @@ class Resty {
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
-    dynamic query,
+    Map<String, dynamic> query,
   }) async {
     return await http.get(
       _buildUri(endpoint, version, query),
@@ -88,7 +88,7 @@ class Resty {
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
-    dynamic query,
+    Map<String, dynamic> query,
   }) async {
     return await http.delete(
       _buildUri(endpoint, version, query),
@@ -96,6 +96,7 @@ class Resty {
     );
   }
 
+  /// see [Uri.http] | [Uri.https]
   Uri _buildUri(String endpoint, String version, [Map<String, dynamic> query]) {
     final unencodedPath = [path, version ?? this.version, endpoint]
         .where((p) => p != null)
