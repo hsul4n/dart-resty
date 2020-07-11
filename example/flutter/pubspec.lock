@@ -50,6 +50,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.1.1"
+  core_extension:
+    dependency: transitive
+    description:
+      path: "../../../dart-extensions/packages/core_extension"
+      relative: true
+    source: path
+    version: "1.0.0"
   crypto:
     dependency: transitive
     description:
@@ -88,6 +95,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.12.1"
+  http_extension:
+    dependency: transitive
+    description:
+      path: "../../../dart-extensions/packages/http_extension"
+      relative: true
+    source: path
+    version: "1.0.0"
   http_parser:
     dependency: transitive
     description:
@@ -150,7 +164,7 @@ packages:
       path: "../.."
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.0.2"
   sky_engine:
     dependency: transitive
     description: flutter

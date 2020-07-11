@@ -21,14 +21,18 @@ class Resty {
 
   const Resty({
     final this.secure = false,
-    final this.host,
+    final String host,
+    final int port,
     final this.path,
     final this.version,
     final this.headers = const {},
-  })  : assert(host != null),
-        assert(headers != null);
+  })  : assert(secure != null),
+        assert(host != null),
+        assert(headers != null),
+        this.host = '$host:${port == null ? secure ? '443' : '80' : port}';
 
   /// see [http.get]
+  /// use [version] if you want to override version
   Future<http.Response> get(
     String endpoint, {
     String version,

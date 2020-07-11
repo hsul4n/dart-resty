@@ -16,6 +16,7 @@ A simple example:
 /// www.example.com/api/v1/
 final resty = const Resty(
     host: 'www.example.com',
+    port: 3000,
     path: 'api',
     version: 'v1',
 );
