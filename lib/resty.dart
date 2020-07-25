@@ -1,11 +1,18 @@
 library resty;
 
+export 'src/auth/basic_auth.dart';
+
 import 'dart:convert' as converter;
 import 'package:http/http.dart' as http;
+
+import 'src/auth.dart';
 
 class Resty {
   /// should use ssl
   final bool secure;
+
+  /// use for auth headers
+  final Auth auth;
 
   /// see: [Uri.http] or [Uri.https]
   final String host;
@@ -21,6 +28,7 @@ class Resty {
 
   const Resty({
     final this.secure = false,
+    final this.auth,
     final String host,
     final int port,
     final this.path,
@@ -113,8 +121,11 @@ class Resty {
         : Uri.http(host, unencodedPath, queryParameters);
   }
 
-  Map<String, String> _buildHeaders(Map<String, dynamic> headers) =>
-      {...this.headers, ...headers}.toStringValues();
+  Map<String, String> _buildHeaders(Map<String, dynamic> headers) => {
+        ...this.headers,
+        ...?headers,
+        ...?auth?.header,
+      }.toStringValues();
 
   dynamic _buildBody(dynamic body) =>
       body is Map ? converter.json.encode(body) : body;

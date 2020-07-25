@@ -1,36 +1,73 @@
-# Resty
-
 A simple, light and useful http wrapper inspired from [zttp](https://github.com/kitetail/zttp) for dart and flutter.
 
-# Features
+# Features ✨
 
-- Lightweight.
-- Simple use.
-- Support both dart & flutter.
+- 📦 Lightweight.
+- 🚀 Simple use.
+- ✅ Support both dart & flutter.
 
-# Usage
+# Usage 🤔
 
-A simple example:
+## Request ➡️
 
 ```dart
-/// www.example.com/api/v1/
+/// `https://www.example.com:3000/api/v1/`
 final resty = const Resty(
+    /// true:https | false:http (default)
+    secure: true,
+    /// base-url without http
     host: 'www.example.com',
+    /// secure:443 | not-secure:80 (default)
     port: 3000,
+    /// base path
     path: 'api',
+    /// can be override later in any request
     version: 'v1',
 );
 
-/// www.example.com/api/v1/resources
-final response = resty.get('resources', query: {
-    'key': 'value',
-});
+/// It as simple as
+/// `https://www.example.com:3000/api/v1/resources`
+resty.get('resources', query: {'foo': 'bar'});
 
-/// true/false
-if (response.isOk) {
-    /// use [response.json] to auto convert response to json
-    print(response.json);
-}
+/// you can override your api version whenever you want
+/// `https://www.example.com:3000/api/v2/resources`
+resty.get('resources', version: 'v2');
+```
+
+## Response ⬅️
+
+```dart
+final response = await resty.get('resources');
+
+/// status code between 200 & 300
+response.isOk | response.isSuccess
+
+/// status code between 300 & 400
+response.isRedirect
+
+/// status code between 400 & 500
+response.isClientError
+
+/// status code >= 500
+response.isServerError
+
+/// auto convert response to json
+response.json
+```
+
+# Authentication 🔒
+
+## Basic Auth 🔑
+
+```dart
+final resty = const Resty(
+  secure: true,
+  auth: BasicAuth(
+    username: 'postman',
+    password: 'password',
+  ),
+  host: 'postman-echo.com'
+);
 ```
 
 # Resty ❤️ Flutter
@@ -59,10 +96,10 @@ class Todo {
 
 // services/todo_service.dart
 class TodoService {
-  final api = locator<Resty>();
+  final resty = locator<Resty>();
 
   Future<List<Todo>> get all async {
-    final response = await api.get('todos');
+    final response = await resty.get('todos');
 
     if (response.isOk) {
       return Todo.fromJsonList(response.json);
@@ -96,8 +133,4 @@ final todos = locator<TodoService>().all;
 print('${todos.length} todos found!');
 ```
 
-# Full [Example](https://github.com/hsul4n/dart-resty/tree/master/example/flutter)
-
-## Fututres & Bugs
-
-Feature requests and bugs at the [issue tracker](https://github.com/hsul4n/dart-resty).
+## [Check full example](https://github.com/hsul4n/dart-resty/tree/master/example/flutter)
