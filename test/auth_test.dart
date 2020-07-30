@@ -9,10 +9,7 @@ void main() {
       password: 'password',
     ),
     host: 'postman-echo.com',
-    headers: {
-      'accept': 'application/json',
-      'content-type': 'application/json',
-    },
+    json: true,
   );
 
   group('test authentications', () {

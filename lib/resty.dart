@@ -1,11 +1,14 @@
 library resty;
 
 export 'src/auth/basic_auth.dart';
+export 'src/response.dart';
 
-import 'dart:convert' as converter;
-import 'package:http/http.dart' as http;
+import 'dart:io' show HttpClient, HttpHeaders, ContentType;
+import 'dart:async' show Completer;
+import 'dart:convert' as converter show utf8, json, JsonEncoder;
 
-import 'src/auth.dart';
+import 'package:resty/src/response.dart';
+import 'package:resty/src/auth.dart';
 
 class Resty {
   /// should use ssl
@@ -17,11 +20,20 @@ class Resty {
   /// see: [Uri.http] or [Uri.https]
   final String host;
 
+  // your port
+  final int port;
+
   /// your base path
   final String path;
 
   /// api version if exists
   final String version;
+
+  /// use to set Accept & [Conntent-Type]
+  final bool json;
+
+  // use to enable log into console
+  final bool logger;
 
   /// default headers
   final Map<String, dynamic> headers;
@@ -29,83 +41,143 @@ class Resty {
   const Resty({
     final this.secure = false,
     final this.auth,
-    final String host,
-    final int port,
+    final this.host,
+    final this.port,
     final this.path,
-    final this.version,
     final this.headers = const {},
+    final this.version,
+    final this.json = false,
+    final this.logger = false,
   })  : assert(secure != null),
         assert(host != null),
         assert(headers != null),
-        this.host = '$host:${port == null ? secure ? '443' : '80' : port}';
+        assert(json != null),
+        assert(logger != null);
 
-  /// see [http.get]
   /// use [version] if you want to override version
-  Future<http.Response> get(
+  Future<Response> get(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
   }) async {
-    return await http.get(
-      _buildUri(endpoint, version, query),
-      headers: _buildHeaders(headers),
+    return _open(
+      method: 'GET',
+      uri: _buildUri(endpoint, version, query),
+      headers: headers,
     );
   }
 
-  /// see [http.post]
-  Future<http.Response> post(
+  Future<Response> post(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
   }) async {
-    return await http.post(
-      _buildUri(endpoint, version),
-      headers: _buildHeaders(headers),
-      body: _buildBody(body),
+    return _open(
+      method: 'POST',
+      uri: _buildUri(endpoint, version),
+      headers: headers,
+      body: body,
     );
   }
 
-  /// see [http.put]
-  Future<http.Response> put(
+  Future<Response> put(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
   }) async {
-    return await http.put(
-      _buildUri(endpoint, version),
-      headers: _buildHeaders(headers),
-      body: _buildBody(body),
+    return _open(
+      method: 'PUT',
+      uri: _buildUri(endpoint, version),
+      headers: headers,
+      body: body,
     );
   }
 
-  /// see [http.patch]
-  Future<http.Response> patch(
+  Future<Response> patch(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
   }) async {
-    return await http.patch(
-      _buildUri(endpoint, version),
-      headers: _buildHeaders(headers),
-      body: _buildBody(body),
+    return _open(
+      method: 'PATCH',
+      uri: _buildUri(endpoint, version),
+      headers: headers,
+      body: body,
     );
   }
 
-  /// see [http.delete]
-  Future<http.Response> delete(
+  Future<Response> delete(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
-  }) async {
-    return await http.delete(
-      _buildUri(endpoint, version, query),
-      headers: _buildHeaders(headers),
+  }) {
+    return _open(
+      method: 'DELETE',
+      uri: _buildUri(endpoint, version, query),
+      headers: headers,
     );
+  }
+
+  Future<Response> _open({
+    String method,
+    Uri uri,
+    Map<String, dynamic> headers,
+    dynamic body,
+  }) async {
+    final httpRequest = await HttpClient().openUrl(method, uri);
+
+    <String, dynamic>{
+      ...this.headers,
+      ...?headers,
+      ...?auth?.header,
+    }.forEach((key, value) {
+      httpRequest.headers.add('$key', '$value');
+    });
+
+    if (json) {
+      httpRequest.headers.add(HttpHeaders.acceptHeader, ContentType.json.value);
+      httpRequest.headers.contentType = ContentType.json;
+    }
+
+    if (body != null) httpRequest.write(converter.json.encode(body));
+
+    if (logger)
+      [
+        'Request',
+        '  URL: ${httpRequest.uri}',
+        '  Method: ${httpRequest.method}',
+        '  Headers: \n    ${httpRequest.headers.toString().split('\n').join('\n    ').trim()}',
+      ].forEach(print);
+
+    final httpResponse = await httpRequest.close();
+
+    final completer = Completer<String>();
+    final contents = StringBuffer();
+    httpResponse.transform(converter.utf8.decoder).listen(
+          contents.write,
+          onDone: () => completer.complete(contents.toString()),
+        );
+
+    final response = Response(
+      statusCode: httpResponse.statusCode,
+      body: await completer.future,
+    );
+
+    if (logger)
+      [
+        'Response',
+        '  Remote Address: ${httpResponse.connectionInfo.remoteAddress.host}',
+        '  Status Code: ${response.isOk ? '🟢' : (response.isClientError ? '🟠' : '🔴')} ${response.statusCode} ${httpResponse.reasonPhrase}',
+        '  Headers: \n    ${httpResponse.headers.toString().split('\n').join('\n    ')?.trim()}',
+        '  Preview: \n    ${converter.JsonEncoder.withIndent('  ').convert(response.json ?? response.body)?.split('\n')?.join('\n    ')?.trim()}',
+      ].forEach(print);
+
+    return response;
   }
 
   /// see [Uri.http] | [Uri.https]
@@ -114,35 +186,13 @@ class Resty {
         .where((p) => p != null)
         .join('/');
 
-    final queryParameters = (query ?? {}).toStringValues();
+    final queryParameters = (query ?? {})
+        .map<String, String>((key, value) => MapEntry('$key', '$value'));
+
+    final authority = '$host:${port ?? (secure ? 443 : 80)}';
 
     return secure
-        ? Uri.https(host, unencodedPath, queryParameters)
-        : Uri.http(host, unencodedPath, queryParameters);
+        ? Uri.https(authority, unencodedPath, queryParameters)
+        : Uri.http(authority, unencodedPath, queryParameters);
   }
-
-  Map<String, String> _buildHeaders(Map<String, dynamic> headers) => {
-        ...this.headers,
-        ...?headers,
-        ...?auth?.header,
-      }.toStringValues();
-
-  dynamic _buildBody(dynamic body) =>
-      body is Map ? converter.json.encode(body) : body;
-}
-
-extension on Map {
-  Map<String, String> toStringValues() =>
-      this.map((key, value) => MapEntry(key, value.toString()));
-}
-
-extension RestyExtension on http.Response {
-  bool get isSuccess => this.statusCode >= 200 && this.statusCode < 300;
-  bool get isOk => this.isSuccess;
-  bool get isRedirect => this.statusCode >= 300 && this.statusCode < 400;
-  bool get isClientError => this.statusCode >= 400 && this.statusCode < 500;
-  bool get isServerError => this.statusCode >= 500;
-
-  dynamic get json =>
-      converter.json.decode(converter.utf8.decode(this.bodyBytes));
 }

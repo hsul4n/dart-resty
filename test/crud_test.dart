@@ -5,10 +5,7 @@ void main() {
   final resty = const Resty(
     secure: true,
     host: 'postman-echo.com',
-    headers: {
-      'accept': 'application/json',
-      'content-type': 'application/json',
-    },
+    json: true,
   );
 
   final data = {'foo': 'bar'};

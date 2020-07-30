@@ -3,10 +3,10 @@ import 'package:example/models/todo.dart';
 import 'package:resty/resty.dart';
 
 class TodoService {
-  final api = locator<Resty>();
+  final resty = locator<Resty>();
 
   Future<List<Todo>> get all async {
-    final response = await api.get('todos');
+    final response = await resty.get('todos');
 
     if (response.isOk) {
       return Todo.fromJsonList(response.json);

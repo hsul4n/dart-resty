@@ -1,3 +1,9 @@
+# 0.0.5
+
+- Drop http library from dependencies.
+- Add json property.
+- Add logger property.
+
 # 0.0.4
 
 - Add auth property.
@@ -5,7 +11,7 @@
 - Enchance testing.
 - Update README.md.
 
-  0.0.3
+# 0.0.3
 
 - Add port property.
 

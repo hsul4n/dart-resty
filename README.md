@@ -23,6 +23,14 @@ final resty = const Resty(
     path: 'api',
     /// can be override later in any request
     version: 'v1',
+    /// use to set accept & content-type to `application/json`
+    json: true,
+    /// use to enable logger
+    logger: true,
+    /// use to send shared headers
+    headers: {
+      'x-header': 'x-value',
+    },
 );
 
 /// It as simple as
@@ -51,7 +59,10 @@ response.isClientError
 /// status code >= 500
 response.isServerError
 
-/// auto convert response to json
+/// get body
+response.body
+
+/// auto convert body to json
 response.json
 ```
 
