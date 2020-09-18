@@ -1,3 +1,13 @@
+# 0.0.6
+
+- Add certificate option to pass `.crt` file.
+- Add observers option.
+- Add timeout option.
+- Add support for digest auth.
+- Add headers to response.
+- Add request body to logger.
+- Add _Content-Length_ header.
+
 # 0.0.5
 
 - Drop http library from dependencies.

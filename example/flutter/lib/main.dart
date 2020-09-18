@@ -28,7 +28,7 @@ class TodoListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Todos'),
+        title: Text('Todos Example'),
       ),
       body: FutureBuilder<List<Todo>>(
         future: locator<TodoService>().all,
@@ -39,9 +39,10 @@ class TodoListPage extends StatelessWidget {
               itemBuilder: (context, i) {
                 final todo = snapshot.data[i];
 
-                return ListTile(
+                return CheckboxListTile(
+                  value: todo.compeleted,
                   title: Text(todo.title),
-                  leading: Icon(todo.compeleted ? Icons.done : Icons.close),
+                  onChanged: null,
                 );
               },
             );

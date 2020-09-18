@@ -1,8 +1,11 @@
 import 'dart:convert' as converter show json;
 
+import 'dart:io';
+
 class Response {
-  final int statusCode;
   final String body;
+  final HttpHeaders headers;
+  final int statusCode;
 
   final bool isSuccess;
   final bool isOk;
@@ -18,7 +21,7 @@ class Response {
     }
   }
 
-  Response({this.statusCode, this.body})
+  Response({this.body, this.headers, this.statusCode})
       : isSuccess = statusCode >= 200 && statusCode < 300,
         isOk = statusCode >= 200 && statusCode < 300,
         isRedirect = statusCode >= 300 && statusCode < 400,

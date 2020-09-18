@@ -8,9 +8,7 @@ class TodoService {
   Future<List<Todo>> get all async {
     final response = await resty.get('todos');
 
-    if (response.isOk) {
-      return Todo.fromJsonList(response.json);
-    }
+    if (response.isOk) return Todo.fromList(response.json);
 
     return [];
   }

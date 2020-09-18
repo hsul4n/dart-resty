@@ -1,27 +1,29 @@
 A simple, light and useful http wrapper inspired from [zttp](https://github.com/kitetail/zttp) for dart and flutter.
 
-# Features ✨
+# Features
 
 - 📦 Lightweight.
 - 🚀 Simple use.
 - ✅ Support both dart & flutter.
 
-# Usage 🤔
+# Usage
 
-## Request ➡️
+## Request
 
 ```dart
-/// `https://www.example.com:3000/api/v1/`
-final resty = const Resty(
-    /// true:https | false:http (default)
+// https://www.example.com:3000/api/v1/
+final resty = Resty(
+    /// true:https (default if certificate is passed) | false:http (default)
     secure: true,
+    /// load certificate
+    certificate: await rootBundle.load("assets/certificate.crt"),
     /// base-url without http
     host: 'www.example.com',
     /// secure:443 | not-secure:80 (default)
     port: 3000,
     /// base path
     path: 'api',
-    /// can be override later in any request
+    /// you can override later in any request
     version: 'v1',
     /// use to set accept & content-type to `application/json`
     json: true,
@@ -29,55 +31,87 @@ final resty = const Resty(
     logger: true,
     /// use to send shared headers
     headers: {
-      'x-header': 'x-value',
+      'foo': 'bar',
     },
+    /// use to specify timeout (default: 30 sec)
+    timeout: Duration(seconds: 60),
+    /// listen to request, response and also errors
+    observers: [
+      Observer(
+        onRequest: (request) async {
+          /// always pass your token before sending request to server
+          request.headers.add('Authorization', 'Bearer ${YOUR_TOKEN_HERE}');
+        },
+        onResponse: (response) {
+          // TODO
+        },
+        onError: (exception) {
+          // TODO
+        },
+      ),
+    ],
 );
 
-/// It as simple as
-/// `https://www.example.com:3000/api/v1/resources`
+// It as simple as
+// https://www.example.com:3000/api/v1/resources
 resty.get('resources', query: {'foo': 'bar'});
 
-/// you can override your api version whenever you want
-/// `https://www.example.com:3000/api/v2/resources`
+// you can override your api version whenever you want
+// https://www.example.com:3000/api/v2/resources
 resty.get('resources', version: 'v2');
 ```
 
-## Response ⬅️
+## Response
 
 ```dart
 final response = await resty.get('resources');
 
-/// status code between 200 & 300
+// status code between 200 & 300
 response.isOk | response.isSuccess
 
-/// status code between 300 & 400
+// status code between 300 & 400
 response.isRedirect
 
-/// status code between 400 & 500
+// status code between 400 & 500
 response.isClientError
 
-/// status code >= 500
+// status code >= 500
 response.isServerError
 
-/// get body
+// get body
 response.body
 
-/// auto convert body to json
+// auto convert body to json
 response.json
 ```
 
-# Authentication 🔒
+# Authentication
 
-## Basic Auth 🔑
+## Basic Auth
 
 ```dart
-final resty = const Resty(
+final resty = Resty(
+  // ...
   secure: true,
-  auth: BasicAuth(
-    username: 'postman',
-    password: 'password',
+  auth: HttpClientBasicCredentials(
+    'postman', // username
+    'password', // password
   ),
-  host: 'postman-echo.com'
+  // ...
+);
+```
+
+## Digest Auth
+
+```dart
+final resty = Resty(
+  // ...
+  secure: true,
+  auth: HttpClientDigestCredentials(
+    'postman', // username
+    'password', // password
+  ),
+  // ...
 );
 ```
 
@@ -93,16 +127,13 @@ class Todo {
   final String title;
   final bool compeleted;
 
-  Todo({this.id, this.title, this.compeleted});
+  Todo.fromMap(Map<String, dynamic> item)
+      : id = item['id'],
+        title = item['title'],
+        compeleted = item['completed'];
 
-  factory Todo.fromJson(Map<String, dynamic> item) => Todo(
-        id: item['id'],
-        title: item['title'],
-        compeleted: item['completed'],
-      );
-
-  static List<Todo> fromJsonList(List<dynamic> items) =>
-      items.map((item) => Todo.fromJson(item)).toList();
+  static List<Todo> fromList(List<dynamic> items) =>
+      items.map((item) => Todo.fromMap(item)).toList();
 }
 
 // services/todo_service.dart
@@ -113,7 +144,7 @@ class TodoService {
     final response = await resty.get('todos');
 
     if (response.isOk) {
-      return Todo.fromJsonList(response.json);
+      return Todo.fromList(response.json);
     }
 
     return [];
@@ -128,10 +159,10 @@ void setupLocator() {
     () => const Resty(
         secure: true,
         host: 'jsonplaceholder.typicode.com',
-        path: 'todos',
     ),
   );
 
+  locator.registerLazySingleton(() => resty);
   locator.registerLazySingleton(() => TodoService());
 }
 ```
@@ -144,4 +175,4 @@ final todos = locator<TodoService>().all;
 print('${todos.length} todos found!');
 ```
 
-## [Check full example](https://github.com/hsul4n/dart-resty/tree/master/example/flutter)
+Check full [example](https://github.com/hsul4n/dart-resty/tree/master/example/flutter)

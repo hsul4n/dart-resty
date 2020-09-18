@@ -2,7 +2,7 @@ import 'package:resty/resty.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final resty = const Resty(
+  final resty = Resty(
     secure: true,
     host: 'postman-echo.com',
     json: true,

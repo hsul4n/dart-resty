@@ -5,11 +5,10 @@ class Todo {
 
   Todo({this.id, this.title, this.compeleted});
 
-  factory Todo.fromJson(Map<String, dynamic> item) => Todo(
-        id: item['id'],
-        title: item['title'],
-        compeleted: item['completed'],
-      );
+  Todo.fromJson(Map<String, dynamic> item)
+      : id = item['id'],
+        title = item['title'],
+        compeleted = item['completed'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -17,6 +16,6 @@ class Todo {
         'compeleted': compeleted ? 1 : 0,
       };
 
-  static List<Todo> fromJsonList(List<dynamic> items) =>
+  static List<Todo> fromList(List<dynamic> items) =>
       items.map((item) => Todo.fromJson(item)).toList();
 }

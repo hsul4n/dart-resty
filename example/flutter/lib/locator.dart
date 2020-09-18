@@ -5,15 +5,15 @@ import 'package:resty/resty.dart';
 final locator = GetIt.instance;
 
 void setupLocator() {
-  // jsonplaceholder.typicode.com/api/v3
-  const resty = const Resty(
-    host: 'jsonplaceholder.typicode.com',
-    path: 'api',
-    version: 'v1',
+  // jsonplaceholder.typicode.com/todos
+  final resty = const Resty(
     secure: true,
-    // versions: ['v1', 'v2', 'v3'],
+    host: 'jsonplaceholder.typicode.com',
+    logger: true,
   );
 
+  // Resty
   locator.registerLazySingleton(() => resty);
+  // Services
   locator.registerLazySingleton(() => TodoService());
 }

@@ -1,21 +1,28 @@
 library resty;
 
-export 'src/auth/basic_auth.dart';
-export 'src/response.dart';
-
-import 'dart:io' show HttpClient, HttpHeaders, ContentType;
-import 'dart:async' show Completer;
+import 'dart:io'
+    show
+        ContentType,
+        HttpClient,
+        HttpClientCredentials,
+        HttpHeaders,
+        SecurityContext;
 import 'dart:convert' as converter show utf8, json, JsonEncoder;
+import 'dart:typed_data' show ByteData;
 
-import 'package:resty/src/response.dart';
-import 'package:resty/src/auth.dart';
+import 'src/response.dart';
+import 'src/observer.dart';
+
+export 'dart:io' show HttpClientBasicCredentials, HttpClientDigestCredentials;
+export 'src/response.dart';
+export 'src/observer.dart';
 
 class Resty {
-  /// should use ssl
+  /// pass to use `https`
   final bool secure;
 
-  /// use for auth headers
-  final Auth auth;
+  /// use for auth
+  final HttpClientCredentials auth;
 
   /// see: [Uri.http] or [Uri.https]
   final String host;
@@ -38,8 +45,17 @@ class Resty {
   /// default headers
   final Map<String, dynamic> headers;
 
+  // connection timeout
+  final Duration timeout;
+
+  /// pass certificate to use ssl
+  final ByteData certificate;
+
+  /// pass to observer requests & responses or catch errors
+  final List<Observer> observers;
+
   const Resty({
-    final this.secure = false,
+    final bool secure,
     final this.auth,
     final this.host,
     final this.port,
@@ -48,11 +64,18 @@ class Resty {
     final this.version,
     final this.json = false,
     final this.logger = false,
-  })  : assert(secure != null),
+    final this.timeout,
+    final this.certificate,
+    final this.observers = const [],
+  })  :
+
+        /// set [secure] true if certificate passed else use value
+        secure = secure ?? certificate != null,
         assert(host != null),
         assert(headers != null),
         assert(json != null),
-        assert(logger != null);
+        assert(logger != null),
+        assert(observers != null);
 
   /// use [version] if you want to override version
   Future<Response> get(
@@ -60,68 +83,63 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
-  }) async {
-    return _open(
-      method: 'GET',
-      uri: _buildUri(endpoint, version, query),
-      headers: headers,
-    );
-  }
+  }) =>
+      _open(
+        method: 'GET',
+        uri: _buildUri(endpoint, version, query),
+        headers: headers,
+      );
 
   Future<Response> post(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
-  }) async {
-    return _open(
-      method: 'POST',
-      uri: _buildUri(endpoint, version),
-      headers: headers,
-      body: body,
-    );
-  }
+  }) =>
+      _open(
+        method: 'POST',
+        uri: _buildUri(endpoint, version),
+        headers: headers,
+        body: body,
+      );
 
   Future<Response> put(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
-  }) async {
-    return _open(
-      method: 'PUT',
-      uri: _buildUri(endpoint, version),
-      headers: headers,
-      body: body,
-    );
-  }
+  }) =>
+      _open(
+        method: 'PUT',
+        uri: _buildUri(endpoint, version),
+        headers: headers,
+        body: body,
+      );
 
   Future<Response> patch(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
-  }) async {
-    return _open(
-      method: 'PATCH',
-      uri: _buildUri(endpoint, version),
-      headers: headers,
-      body: body,
-    );
-  }
+  }) =>
+      _open(
+        method: 'PATCH',
+        uri: _buildUri(endpoint, version),
+        headers: headers,
+        body: body,
+      );
 
   Future<Response> delete(
     String endpoint, {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
-  }) {
-    return _open(
-      method: 'DELETE',
-      uri: _buildUri(endpoint, version, query),
-      headers: headers,
-    );
-  }
+  }) =>
+      _open(
+        method: 'DELETE',
+        uri: _buildUri(endpoint, version, query),
+        headers: headers,
+      );
 
   Future<Response> _open({
     String method,
@@ -129,65 +147,102 @@ class Resty {
     Map<String, dynamic> headers,
     dynamic body,
   }) async {
-    final httpRequest = await HttpClient().openUrl(method, uri);
+    try {
+      final bodyBytes = converter.utf8.encode(converter.json.encode(body));
 
-    <String, dynamic>{
-      ...this.headers,
-      ...?headers,
-      ...?auth?.header,
-    }.forEach((key, value) {
-      httpRequest.headers.add('$key', '$value');
-    });
+      SecurityContext httpClientContext;
 
-    if (json) {
-      httpRequest.headers.add(HttpHeaders.acceptHeader, ContentType.json.value);
-      httpRequest.headers.contentType = ContentType.json;
+      if (certificate != null)
+        httpClientContext = SecurityContext()
+          ..setTrustedCertificatesBytes(certificate.buffer.asUint8List());
+      else
+        httpClientContext = SecurityContext.defaultContext;
+
+      final httpClient = HttpClient(context: httpClientContext);
+
+      if (timeout != null) httpClient.connectionTimeout = timeout;
+
+      if (auth != null)
+        httpClient.authenticate = (url, _, realm) {
+          httpClient.addCredentials(url, realm, auth);
+
+          return Future.value(true);
+        };
+
+      final httpRequest = await httpClient.openUrl(method, uri);
+
+      <String, dynamic>{
+        if (json) ...{
+          HttpHeaders.acceptHeader: ContentType.json.value,
+          HttpHeaders.contentTypeHeader: ContentType.json.toString(),
+        },
+
+        if (body != null) HttpHeaders.contentLengthHeader: bodyBytes.length,
+
+        /// add shared headers
+        ...this.headers,
+
+        /// add extra headers
+        ...?headers,
+      }.forEach(httpRequest.headers.add);
+
+      if (body != null) httpRequest.add(bodyBytes);
+
+      await Future.forEach(
+        observers,
+        (observer) async => await observer.onRequest(httpRequest),
+      );
+
+      if (logger)
+        [
+          'Request',
+          '  URL: ${httpRequest.uri}',
+          '  Method: ${httpRequest.method}',
+          '  Headers: \n    ${httpRequest.headers.toString().split('\n').join('\n    ').trim()}',
+          if (body != null)
+            '  Preview: \n    ${converter.JsonEncoder.withIndent('  ')?.convert(body)?.split('\n')?.join('\n    ')?.trim() ?? body}',
+        ].forEach(print);
+
+      final httpResponse = await httpRequest.close();
+
+      final response = Response(
+        headers: httpResponse.headers,
+        body: await httpResponse.transform(converter.utf8.decoder).join(),
+        statusCode: httpResponse.statusCode,
+      );
+
+      await Future.forEach(
+        observers,
+        (observer) async => await observer.onResponse(httpResponse),
+      );
+
+      if (logger)
+        [
+          'Response',
+          '  Remote Address: ${httpResponse.connectionInfo.remoteAddress.host}',
+          '  Status Code: ${response.isOk ? '🟢' : (response.isClientError ? '🟠' : '🔴')} ${response.statusCode} ${httpResponse.reasonPhrase}',
+          '  Headers: \n    ${httpResponse.headers.toString().split('\n').join('\n    ')?.trim()}',
+          '  Preview: \n    ${response.json != null ? converter.JsonEncoder.withIndent('  ')?.convert(response.json)?.split('\n')?.join('\n    ')?.trim() : response.body}',
+        ].forEach(print);
+
+      return response;
+    } catch (error) {
+      await Future.forEach(
+        observers,
+        (observer) async => await observer.onError(Exception(error)),
+      );
+
+      return null;
     }
-
-    if (body != null) httpRequest.write(converter.json.encode(body));
-
-    if (logger)
-      [
-        'Request',
-        '  URL: ${httpRequest.uri}',
-        '  Method: ${httpRequest.method}',
-        '  Headers: \n    ${httpRequest.headers.toString().split('\n').join('\n    ').trim()}',
-      ].forEach(print);
-
-    final httpResponse = await httpRequest.close();
-
-    final completer = Completer<String>();
-    final contents = StringBuffer();
-    httpResponse.transform(converter.utf8.decoder).listen(
-          contents.write,
-          onDone: () => completer.complete(contents.toString()),
-        );
-
-    final response = Response(
-      statusCode: httpResponse.statusCode,
-      body: await completer.future,
-    );
-
-    if (logger)
-      [
-        'Response',
-        '  Remote Address: ${httpResponse.connectionInfo.remoteAddress.host}',
-        '  Status Code: ${response.isOk ? '🟢' : (response.isClientError ? '🟠' : '🔴')} ${response.statusCode} ${httpResponse.reasonPhrase}',
-        '  Headers: \n    ${httpResponse.headers.toString().split('\n').join('\n    ')?.trim()}',
-        '  Preview: \n    ${converter.JsonEncoder.withIndent('  ').convert(response.json ?? response.body)?.split('\n')?.join('\n    ')?.trim()}',
-      ].forEach(print);
-
-    return response;
   }
 
   /// see [Uri.http] | [Uri.https]
   Uri _buildUri(String endpoint, String version, [Map<String, dynamic> query]) {
     final unencodedPath = [path, version ?? this.version, endpoint]
-        .where((p) => p != null)
+        .where((path) => path != null)
         .join('/');
 
-    final queryParameters = (query ?? {})
-        .map<String, String>((key, value) => MapEntry('$key', '$value'));
+    final queryParameters = query?.map((k, v) => MapEntry('$k', '$v'));
 
     final authority = '$host:${port ?? (secure ? 443 : 80)}';
 
