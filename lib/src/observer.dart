@@ -17,13 +17,13 @@ class Observer extends Observe {
 
   @override
   Future onRequest(HttpClientRequest request) async =>
-      _onRequest != null ? _onRequest(request) : request;
+      _onRequest != null ? await _onRequest(request) : request;
 
   @override
   Future onResponse(HttpClientResponse response) async =>
-      _onResponse != null ? _onResponse(response) : response;
+      _onResponse != null ? await _onResponse(response) : response;
 
   @override
   Future onError(Exception exception) async =>
-      _onError != null ? _onError(exception) : exception;
+      _onError != null ? await _onError(exception) : exception;
 }

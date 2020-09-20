@@ -1,3 +1,7 @@
+# 0.0.7
+
+Minor fixes and improvements.
+
 # 0.0.6
 
 - Add certificate option to pass `.crt` file.

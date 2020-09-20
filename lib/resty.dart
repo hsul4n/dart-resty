@@ -219,7 +219,8 @@ class Resty {
       if (logger)
         [
           'Response',
-          '  Remote Address: ${httpResponse.connectionInfo.remoteAddress.host}',
+          if (httpRequest.connectionInfo?.remoteAddress?.host != null)
+            '  Remote Address: ${httpResponse.connectionInfo.remoteAddress.host}',
           '  Status Code: ${response.isOk ? '🟢' : (response.isClientError ? '🟠' : '🔴')} ${response.statusCode} ${httpResponse.reasonPhrase}',
           '  Headers: \n    ${httpResponse.headers.toString().split('\n').join('\n    ')?.trim()}',
           '  Preview: \n    ${response.json != null ? converter.JsonEncoder.withIndent('  ')?.convert(response.json)?.split('\n')?.join('\n    ')?.trim() : response.body}',
