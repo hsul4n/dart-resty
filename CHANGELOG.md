@@ -1,3 +1,7 @@
+# 0.0.8
+
+Fix observer problem after locking request headers.
+
 # 0.0.7
 
 Minor fixes and improvements.

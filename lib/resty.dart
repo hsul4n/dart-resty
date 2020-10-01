@@ -171,6 +171,11 @@ class Resty {
 
       final httpRequest = await httpClient.openUrl(method, uri);
 
+      await Future.forEach(
+        observers,
+        (Observer observer) async => await observer.onRequest(httpRequest),
+      );
+
       <String, dynamic>{
         if (json) ...{
           HttpHeaders.acceptHeader: ContentType.json.value,
@@ -188,11 +193,6 @@ class Resty {
 
       if (body != null) httpRequest.add(bodyBytes);
 
-      await Future.forEach(
-        observers,
-        (observer) async => await observer.onRequest(httpRequest),
-      );
-
       if (logger)
         [
           'Request',
@@ -205,15 +205,15 @@ class Resty {
 
       final httpResponse = await httpRequest.close();
 
+      await Future.forEach(
+        observers,
+        (Observer observer) async => await observer.onResponse(httpResponse),
+      );
+
       final response = Response(
         headers: httpResponse.headers,
         body: await httpResponse.transform(converter.utf8.decoder).join(),
         statusCode: httpResponse.statusCode,
-      );
-
-      await Future.forEach(
-        observers,
-        (observer) async => await observer.onResponse(httpResponse),
       );
 
       if (logger)
@@ -230,7 +230,7 @@ class Resty {
     } catch (error) {
       await Future.forEach(
         observers,
-        (observer) async => await observer.onError(Exception(error)),
+        (Observer observer) async => await observer.onError(Exception(error)),
       );
 
       return null;

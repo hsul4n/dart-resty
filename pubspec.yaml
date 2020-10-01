@@ -1,5 +1,5 @@
 name: resty
-version: 0.0.7
+version: 0.0.8
 homepage: https://github.com/hsul4n/dart-resty
 description: A simple, light and useful http wrapper.
 
