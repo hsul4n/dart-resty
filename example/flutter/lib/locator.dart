@@ -5,7 +5,6 @@ import 'package:resty/resty.dart';
 final locator = GetIt.instance;
 
 void setupLocator() {
-  // jsonplaceholder.typicode.com/todos
   final resty = const Resty(
     secure: true,
     host: 'jsonplaceholder.typicode.com',

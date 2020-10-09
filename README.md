@@ -155,11 +155,10 @@ class TodoService {
 final locator = GetIt.instance;
 
 void setupLocator() {
-  locator.registerLazySingleton(
-    () => const Resty(
-        secure: true,
-        host: 'jsonplaceholder.typicode.com',
-    ),
+  final resty = const Resty(
+    secure: true,
+    host: 'jsonplaceholder.typicode.com',
+    logger: true,
   );
 
   locator.registerLazySingleton(() => resty);

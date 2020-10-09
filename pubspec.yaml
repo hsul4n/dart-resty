@@ -1,8 +1,7 @@
 name: resty
-version: 0.0.8
+version: 0.0.9
 homepage: https://github.com/hsul4n/dart-resty
-description: A simple, light and useful http wrapper.
-
+description: A simple, light and useful http wrapper built above dart's http core library.
 environment:
   sdk: ">=2.6.0 <3.0.0"
 

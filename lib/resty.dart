@@ -21,7 +21,7 @@ class Resty {
   /// pass to use `https`
   final bool secure;
 
-  /// use for auth
+  /// see: [HttpClientCredentials]
   final HttpClientCredentials auth;
 
   /// see: [Uri.http] or [Uri.https]
@@ -69,7 +69,7 @@ class Resty {
     final this.observers = const [],
   })  :
 
-        /// set [secure] true if certificate passed else use value
+        /// set [secure] true if certificate passed else use the given value
         secure = secure ?? certificate != null,
         assert(host != null),
         assert(headers != null),
@@ -77,7 +77,7 @@ class Resty {
         assert(logger != null),
         assert(observers != null);
 
-  /// use [version] if you want to override version
+  /// see [HttpClient.get]
   Future<Response> get(
     String endpoint, {
     String version,
@@ -90,6 +90,7 @@ class Resty {
         headers: headers,
       );
 
+  /// see [HttpClient.post]
   Future<Response> post(
     String endpoint, {
     String version,
@@ -103,6 +104,7 @@ class Resty {
         body: body,
       );
 
+  /// see [HttpClient.put]
   Future<Response> put(
     String endpoint, {
     String version,
@@ -116,6 +118,7 @@ class Resty {
         body: body,
       );
 
+  /// see [HttpClient.patch]
   Future<Response> patch(
     String endpoint, {
     String version,
@@ -129,6 +132,7 @@ class Resty {
         body: body,
       );
 
+  /// see [HttpClient.delete]
   Future<Response> delete(
     String endpoint, {
     String version,
@@ -141,6 +145,7 @@ class Resty {
         headers: headers,
       );
 
+  /// see [HttpClient.openUrl]
   Future<Response> _open({
     String method,
     Uri uri,
@@ -237,6 +242,7 @@ class Resty {
     }
   }
 
+  /// use [version] if you want to override version
   /// see [Uri.http] | [Uri.https]
   Uri _buildUri(String endpoint, String version, [Map<String, dynamic> query]) {
     final unencodedPath = [path, version ?? this.version, endpoint]
