@@ -85,6 +85,16 @@ response.body
 response.json
 ```
 
+## Progress
+
+```dart
+await resty.get('resources', progress: (progress) {
+  print(progress.sent); // Sent bytes
+  print(progress.total); // Total bytes
+  print(progress.percentage); // Percentage value helpful when showing loading indicator
+});
+```
+
 # Authentication
 
 ## Basic Auth

@@ -1,5 +1,6 @@
 library resty;
 
+import 'dart:async' show StreamTransformer;
 import 'dart:io'
     show
         ContentType,
@@ -10,12 +11,15 @@ import 'dart:io'
 import 'dart:convert' as converter show utf8, json, JsonEncoder;
 import 'dart:typed_data' show ByteData;
 
+import 'src/progress.dart';
 import 'src/response.dart';
 import 'src/observer.dart';
 
 export 'dart:io' show HttpClientBasicCredentials, HttpClientDigestCredentials;
 export 'src/response.dart';
 export 'src/observer.dart';
+
+typedef _ProgressCallback = void Function(Progress progress);
 
 class Resty {
   /// pass to use `https`
@@ -83,11 +87,13 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
+    _ProgressCallback progress,
   }) =>
-      _open(
+      _request(
         method: 'GET',
         uri: _buildUri(endpoint, version, query),
         headers: headers,
+        progress: progress,
       );
 
   /// see [HttpClient.post]
@@ -96,12 +102,14 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
+    _ProgressCallback progress,
   }) =>
-      _open(
+      _request(
         method: 'POST',
         uri: _buildUri(endpoint, version),
         headers: headers,
         body: body,
+        progress: progress,
       );
 
   /// see [HttpClient.put]
@@ -110,12 +118,14 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
+    _ProgressCallback progress,
   }) =>
-      _open(
+      _request(
         method: 'PUT',
         uri: _buildUri(endpoint, version),
         headers: headers,
         body: body,
+        progress: progress,
       );
 
   /// see [HttpClient.patch]
@@ -124,12 +134,14 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     dynamic body,
+    _ProgressCallback progress,
   }) =>
-      _open(
+      _request(
         method: 'PATCH',
         uri: _buildUri(endpoint, version),
         headers: headers,
         body: body,
+        progress: progress,
       );
 
   /// see [HttpClient.delete]
@@ -138,19 +150,22 @@ class Resty {
     String version,
     Map<String, dynamic> headers = const {},
     Map<String, dynamic> query,
+    _ProgressCallback progress,
   }) =>
-      _open(
+      _request(
         method: 'DELETE',
         uri: _buildUri(endpoint, version, query),
         headers: headers,
+        progress: progress,
       );
 
   /// see [HttpClient.openUrl]
-  Future<Response> _open({
+  Future<Response> _request({
     String method,
     Uri uri,
     Map<String, dynamic> headers,
     dynamic body,
+    _ProgressCallback progress,
   }) async {
     try {
       final bodyBytes = converter.utf8.encode(converter.json.encode(body));
@@ -215,9 +230,30 @@ class Resty {
         (Observer observer) async => await observer.onResponse(httpResponse),
       );
 
+      int sentBytes = 0;
+
       final response = Response(
         headers: httpResponse.headers,
-        body: await httpResponse.transform(converter.utf8.decoder).join(),
+        body: await httpResponse
+            .transform(
+              StreamTransformer.fromHandlers(
+                handleData: (data, sink) {
+                  sink.add(converter.utf8.decode(data));
+                  sentBytes += data.length;
+                  progress
+                      ?.call(Progress(sentBytes, httpResponse.contentLength));
+                },
+                handleError: (error, stack, sink) async {
+                  await Future.forEach(
+                    observers,
+                    (Observer observer) async =>
+                        await observer.onError(Exception(error)),
+                  );
+                },
+                handleDone: (sink) => sink.close(),
+              ),
+            )
+            .join(),
         statusCode: httpResponse.statusCode,
       );
 

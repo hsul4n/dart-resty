@@ -1,3 +1,7 @@
+# 0.1.0
+
+- Add progress property to indicate http requrest progress.
+
 # 0.0.9
 
 - Improve pacakge description.
